@@ -79,6 +79,25 @@ For JSON output (useful for scripting):
 cpu-usb-check --json
 ```
 
+Example JSON output:
+```json
+{
+  "controllers": [
+    {"name": "Controller Name", "type": "CPU"}
+  ],
+  "devices": [
+    {
+      "name": "Device Name",
+      "vid_pid": "1234:5678",
+      "controller": "Controller Name",
+      "controller_type": "CPU",
+      "status": "BEST",
+      "hubs": []
+    }
+  ]
+}
+```
+
 ## Example Output
 
 ```text

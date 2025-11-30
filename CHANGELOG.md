@@ -13,9 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Detect USB hubs in the device path
 - Color-coded terminal output
 - Command-line interface
+- JSON output option for scripting
 - Comprehensive test suite
 - Type checking with mypy
 - Code formatting with black and isort
+- GitHub Actions CI/CD pipeline
+- PyPI package configuration
+- Support for Python 3.8-3.14
 
 ### Changed
 - Improved exception handling with specific exception types
