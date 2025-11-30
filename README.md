@@ -18,7 +18,7 @@ Original Project: [https://tools.mariusheier.com/cpudirect.html](https://tools.m
 
 ## Prerequisites
 - Linux
-- Python 3.6+
+- Python 3.8+
 - `pciutils` (provides the `lspci` command)
 
 ## Installation

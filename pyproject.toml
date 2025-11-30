@@ -9,15 +9,13 @@ description = "A Python utility to detect whether your USB devices are connected
 readme = "README.md"
 license = {file = "LICENSE"}
 authors = [{name = "lance0"}]
-requires-python = ">=3.6"
+requires-python = ">=3.8"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: End Users/Desktop",
     "License :: OSI Approved :: MIT License",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.6",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -43,7 +41,7 @@ packages = ["."]
 
 [tool.black]
 line-length = 88
-target-version = ['py36']
+target-version = ['py38']
 
 [tool.isort]
 profile = "black"
