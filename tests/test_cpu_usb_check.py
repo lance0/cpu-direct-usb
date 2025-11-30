@@ -70,12 +70,7 @@ class TestCpuUsbCheck(unittest.TestCase):
         self.assertIsNone(result)
 
     @patch("os.path.realpath")
-    @patch("os.path.realpath")
-    @patch("os.path.dirname")
-    @patch("os.path.basename")
-    def test_get_usb_info_pci_found(
-        self, mock_basename: Any, mock_dirname: Any, mock_realpath: Any
-    ) -> None:
+    def test_get_usb_info_pci_found(self, mock_realpath: Any) -> None:
         mock_realpath.return_value = "/sys/devices/pci0000:00/0000:00:14.0"
         result = get_usb_info("/fake/path")
         self.assertIsNotNone(result)
