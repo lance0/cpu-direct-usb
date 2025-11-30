@@ -74,8 +74,8 @@ class TestCpuUsbCheck(unittest.TestCase):
     def test_get_usb_info_pci_found(self, mock_basename, mock_dirname, mock_realpath):
         mock_realpath.return_value = "/sys/devices/pci0000:00/0000:00:14.0/usb1/1-1"
         mock_dirname.side_effect = lambda x: "/parent" if x != "/parent" else "/"
-        mock_basename.side_effect = (
-            lambda x: "0000:00:14.0" if "0000:00:14.0" in x else "usb1"
+        mock_basename.side_effect = lambda x: (
+            "0000:00:14.0" if "0000:00:14.0" in x else "usb1"
         )
         result = get_usb_info("/fake/path")
         self.assertIsNotNone(result)
