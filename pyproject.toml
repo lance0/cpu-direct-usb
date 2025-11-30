@@ -8,6 +8,7 @@ version = "1.0.0"
 description = "A Python utility to detect whether your USB devices are connected through CPU-direct or Chipset USB ports on Linux."
 readme = "README.md"
 license = {file = "LICENSE"}
+authors = [{name = "lance0"}]
 requires-python = ">=3.6"
 classifiers = [
     "Development Status :: 4 - Beta",
