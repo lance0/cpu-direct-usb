@@ -9,6 +9,7 @@ import subprocess
 import glob
 import re
 import argparse
+import json
 from typing import Any, Dict, List, Optional, Union
 
 
@@ -139,9 +140,10 @@ def main() -> None:
     parser.add_argument(
         "--no-color", action="store_true", help="Disable colored output"
     )
+    parser.add_argument("--json", action="store_true", help="Output in JSON format")
     args = parser.parse_args()
 
-    if args.no_color:
+    if args.no_color or args.json:
         Colors.disable()
 
     # Check for lspci
@@ -151,25 +153,15 @@ def main() -> None:
         )
         != 0
     ):
-        print(
-            f"{Colors.BAD}Error: 'lspci' command not found. Please install pciutils (e.g., sudo apt install pciutils).{Colors.RESET}"
-        )
+        error_msg = "Error: 'lspci' command not found. Please install pciutils (e.g., sudo apt install pciutils)."
+        if args.json:
+            print(json.dumps({"error": error_msg}))
+        else:
+            print(f"{Colors.BAD}{error_msg}{Colors.RESET}")
         sys.exit(1)
 
-    print("")
-    print(f"{Colors.HEADER}CPU DIRECT USB CHECKER (Linux Port){Colors.RESET}")
-    print(
-        f"{Colors.HEADER}============================================================{Colors.RESET}"
-    )
-    print(
-        f"{Colors.WARN}EXPERIMENTAL - detection heuristics are approximated{Colors.RESET}"
-    )
-
-    # 1. List Controllers
-    print("")
-    print(f"{Colors.LABEL}USB CONTROLLERS{Colors.RESET}")
-
     controllers: Dict[str, Dict[str, Any]] = {}  # slot -> info
+    data = {"controllers": [], "devices": [], "error": None}
 
     try:
         # Get all USB controllers via lspci
@@ -193,20 +185,28 @@ def main() -> None:
                     is_cpu = is_cpu_controller(name, slot)
 
                     controllers[full_slot] = {"name": name, "is_cpu": is_cpu}
-
-                    prefix = (
-                        f"{Colors.BEST}[CPU]    "
-                        if is_cpu
-                        else f"{Colors.TEXT}[Chipset]"
+                    data["controllers"].append(
+                        {"name": name, "type": "CPU" if is_cpu else "Chipset"}
                     )
-                    print(f"  {prefix} {Colors.VALUE}{name}{Colors.RESET}")
+
+                    if not args.json:
+                        prefix = (
+                            f"{Colors.BEST}[CPU]    "
+                            if is_cpu
+                            else f"{Colors.TEXT}[Chipset]"
+                        )
+                        print(f"  {prefix} {Colors.VALUE}{name}{Colors.RESET}")
 
     except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
-        print(f"{Colors.BAD}Error scanning controllers: {e}{Colors.RESET}")
+        if args.json:
+            data["error"] = f"Error scanning controllers: {e}"
+        else:
+            print(f"{Colors.BAD}Error scanning controllers: {e}{Colors.RESET}")
 
     # 2. Input Devices
-    print("")
-    print(f"{Colors.LABEL}INPUT DEVICES{Colors.RESET}")
+    if not args.json:
+        print("")
+        print(f"{Colors.LABEL}INPUT DEVICES{Colors.RESET}")
 
     found_any = False
 
@@ -271,46 +271,83 @@ def main() -> None:
         has_hub = info["hub_count"] > 0
 
         # Determine Status
-        status = ""
-        status_color = ""
-
         if is_cpu and not has_hub:
             status = "BEST"
-            status_color = Colors.BEST
         elif is_cpu and has_hub:
             status = "HUB"
-            status_color = Colors.WARN
         elif not is_cpu and not has_hub:
             status = "CHIPSET"
-            status_color = Colors.WARN
         else:
             status = "CHIPSET+HUB"
-            status_color = Colors.BAD
 
+        device_data = {
+            "name": product_name,
+            "vid_pid": f"{vid}:{pid}",
+            "controller": ctrl_info["name"],
+            "controller_type": "CPU" if is_cpu else "Chipset",
+            "status": status,
+            "hubs": info["hubs"] if has_hub else [],
+        }
+        data["devices"].append(device_data)
+
+        if not args.json:
+            print("")
+            print(f"  {Colors.VALUE}{product_name}{Colors.RESET}")
+            print(f"  {Colors.TEXT}VID:PID {vid}:{pid}{Colors.RESET}")
+
+            # Controller
+            ct_prefix = Colors.BEST if is_cpu else Colors.WARN
+            ct_suffix = "(direct to CPU die)" if is_cpu else "(extra latency)"
+            print(
+                f"  {Colors.TEXT}Controller: {ct_prefix}{ctrl_info['name']} {Colors.TEXT}{ct_suffix}{Colors.RESET}"
+            )
+
+        if not args.json:
+            # Hub
+            if has_hub:
+                hub_names = ", ".join(info["hubs"]) if info["hubs"] else "Yes"
+                print(
+                    f"  {Colors.TEXT}Hub: {Colors.WARN}YES - {hub_names}{Colors.RESET}"
+                )
+
+            # Status
+            status_color = (
+                Colors.BEST
+                if status == "BEST"
+                else Colors.WARN
+                if status in ["HUB", "CHIPSET"]
+                else Colors.BAD
+            )
+            print(f"  {Colors.TEXT}Status: {status_color}[{status}]{Colors.RESET}")
+
+    if not args.json:
+        if not found_any:
+            print(f"\n  {Colors.TEXT}No USB input devices found.{Colors.RESET}")
+
+        # Legend
         print("")
-        print(f"  {Colors.VALUE}{product_name}{Colors.RESET}")
-        print(f"  {Colors.TEXT}VID:PID {vid}:{pid}{Colors.RESET}")
-
-        # Controller
-        ct_prefix = Colors.BEST if is_cpu else Colors.WARN
-        ct_suffix = "(direct to CPU die)" if is_cpu else "(extra latency)"
         print(
-            f"  {Colors.TEXT}Controller: {ct_prefix}{ctrl_info['name']} {Colors.TEXT}{ct_suffix}{Colors.RESET}"
+            f"{Colors.HEADER}============================================================{Colors.RESET}"
         )
+        print("")
+        print(f"{Colors.LABEL}STATUS GUIDE:{Colors.RESET}")
+        print(
+            f"  {Colors.BEST}[BEST]        {Colors.TEXT}CPU-direct, no hub - lowest possible latency{Colors.RESET}"
+        )
+        print(
+            f"  {Colors.WARN}[HUB]         {Colors.TEXT}CPU-direct but through a hub - try another port{Colors.RESET}"
+        )
+        print(
+            f"  {Colors.WARN}[CHIPSET]     {Colors.TEXT}Chipset USB - move to CPU port if available{Colors.RESET}"
+        )
+        print(
+            f"  {Colors.BAD}[CHIPSET+HUB] {Colors.TEXT}Worst path - definitely move this device{Colors.RESET}"
+        )
+        print("")
 
-        # Hub
-        if has_hub:
-            hub_names = ", ".join(info["hubs"]) if info["hubs"] else "Yes"
-            print(f"  {Colors.TEXT}Hub: {Colors.WARN}YES - {hub_names}{Colors.RESET}")
-
-        # Status
-        print(f"  {Colors.TEXT}Status: {status_color}[{status}]{Colors.RESET}")
-
-    if not found_any:
-        print(f"\n  {Colors.TEXT}No USB input devices found.{Colors.RESET}")
-
-    # Legend
-    print("")
+    # Output JSON if requested
+    if args.json:
+        print(json.dumps(data, indent=2))
     print(
         f"{Colors.HEADER}============================================================{Colors.RESET}"
     )

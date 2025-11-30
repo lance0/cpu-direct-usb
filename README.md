@@ -73,6 +73,12 @@ To disable colors:
 cpu-usb-check --no-color
 ```
 
+For JSON output (useful for scripting):
+
+```bash
+cpu-usb-check --json
+```
+
 ## Example Output
 
 ```text
